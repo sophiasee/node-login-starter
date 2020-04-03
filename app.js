@@ -6,6 +6,10 @@ const handlebars = require('handlebars');
 const bodyParser = require('body-parser');
 const mongoose = require('./models/connection');
 
+const session = require('express-session');
+const flash = require('connect-flash');
+const MongoStore = require('connect-mongo')(session);
+
 // Routes imports
 const authRouter = require('./routes/auth');
 const indexRouter = require('./routes/index');
@@ -40,7 +44,24 @@ app.use(bodyParser.urlencoded({
 app.use(express.static('public'));
 
 // Insert server configuration after this comment
+// Sessions
+app.use(session({
+  secret: 'somegibberishsecret',
+  store: new MongoStore({ mongooseConnection: mongoose.connection }),
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false, maxAge: 1000 * 60 * 60 * 24 * 7 }
+}));
 
+// Flash
+app.use(flash());
+
+// Global messages vars
+app.use((req, res, next) => {
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg = req.flash('error_msg');
+  next();
+});
 
 app.use('/', authRouter); // Login/registration routes
 app.use('/', indexRouter); // Main index route
